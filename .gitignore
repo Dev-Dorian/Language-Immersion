@@ -1,7 +1,4 @@
 backend/__pycache__
 backend/.env
-
-frontend/frontend/.claude
 frontend/frontend/.expo
-frontend/frontend/.vscode
 frontend/frontend/node_modules
