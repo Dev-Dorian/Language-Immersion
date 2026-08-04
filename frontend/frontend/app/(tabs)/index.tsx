@@ -1,34 +1,80 @@
+import { useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
-
+  Alert
 
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera'
-import { useRef, useState } from 'react';
+
+const API_URL = 'http://192.168.1.160:8000'
 
 interface ImmersionCard {
-
+  object_detected: string;
+  target_language: string;
+  vocabulary: string;
+  example_sentence: string;
+  phonetic: string;
 }
 
 export default function HomeScreen() {
 
-  const cameraRef = useRef<any>(null)
+  const [permission, requestPermission] = useCameraPermissions();
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ImmersionCard | null>(null)
+  const cameraRef = useRef<any>(null)
+
+  if (!permission) {
+    return <View style={styles.container}></View>
+  }
+
+  if (!permission.granted) {
+    return (
+      <SafeAreaView>
+        <Text>Concender Permisos</Text>
+      </SafeAreaView>
+    )
+  }
 
   const takePicture = async () => {
     if (cameraRef.current && !loading) {
       try {
         setLoading(true)
         setResult(null)
+
+        const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 })
+
+        const formData = new FormData();
+        formData.append('target_language', 'french')
+        formData.append('image', {
+          uri: photo.uri,
+          name: 'photo.jpg',
+          type: 'image/jpeg'
+        } as any)
+
+        const response = await fetch(`${API_URL}/analyze-image`, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error('Error al analizar la imagen')
+        }
+
+        const data: ImmersionCard = await response.json()
+        setResult(data)
+
       } catch (error) {
-
+        Alert.alert('Error', 'No se pudo conectar con el servidor.')
+        console.log(error)
       } finally {
-
+        setLoading(false)
       }
     }
   }
@@ -38,21 +84,21 @@ export default function HomeScreen() {
       <text style={styles.title}>Language Immersion Dorian 🌍</text>
       <View style={styles.cameraContainer}>
         <CameraView style={styles.camera} ref={cameraRef}>
-          <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-            <View>VIEW</View>
+          <TouchableOpacity style={styles.captureButton} onPress={takePicture} disabled={loading}>
+            <View style={styles.innerButton}>VIEW</View>
           </TouchableOpacity>
         </CameraView>
       </View>
 
 
-      {/*{result && !loading && (*/}
-      <Text style={styles.tag}>Hola Tag</Text>
-      <View style={styles.card}>
-        <Text style={styles.vocab}>Hola vocab</Text>
-        <Text style={styles.phonetic}>Hola phonetic</Text>
-        <Text style={styles.sentence}>Hola sentence</Text>
-      </View>
-      {/*)}*/}
+      {result && !loading && (
+        <View style={styles.card}>
+          <Text style={styles.tag}>Detectado: {result.object_detected}</Text>
+          <Text style={styles.vocab}>{result.vocabulary}</Text>
+          <Text style={styles.phonetic}>{result.phonetic}</Text>
+          <Text style={styles.sentence}>{result.example_sentence}</Text>
+        </View>
+      )}
 
     </SafeAreaView >
   );
@@ -90,6 +136,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     justifyContent: 'center',
     alignItems: 'center'
+  },
+  innerButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFF'
   },
   card: {
     backgroundColor: '#1E293B',
