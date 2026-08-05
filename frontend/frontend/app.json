@@ -30,6 +30,7 @@
       [
         "expo-splash-screen",
         {
+          "cameraPermission": "LanguageImmersion necesita acceso a la cámara para detectar objetos.",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",

@@ -1,12 +1,11 @@
 import os
 import json
+import io
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 from PIL import Image
-import io
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,8 +20,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inicializar cliente de Gemini
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    print("⚠️ ADVERTENCIA: GEMINI_API_KEY no encontrada.")
+else:
+    print("✅ GEMINI_API_KEY cargada correctamente.")
+
+# Configurar cliente de Gemini
+genai.configure(api_key=api_key)
 
 
 class TranslationResponse(BaseModel):
@@ -35,7 +40,30 @@ class TranslationResponse(BaseModel):
 
 @app.get("/")
 def home():
-    return {"status": "ok", "message": "LanguageImmersion Backend funcionando correctamente"}
+    return {"status": "ok", "app": "LanguageImmersion"}
+
+
+@app.get("/list-models")
+def list_models():
+    try:
+        models = [
+            m.name for m in genai.list_models()
+            if 'generateContent' in m.supported_generation_methods
+        ]
+        return {"available_models": models}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_working_model():
+    """Busca y retorna el primer modelo activo disponible para tu API Key."""
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            # Quitamos el prefijo 'models/' si la librería lo requiere
+            model_name = m.name.replace("models/", "")
+            return model_name
+    raise RuntimeError(
+        "No se encontraron modelos con 'generateContent' para esta API Key.")
 
 
 @app.post("/analyze-image", response_model=TranslationResponse)
@@ -44,34 +72,42 @@ async def analyze_image(
     image: UploadFile = File(...)
 ):
     try:
-        # 1. Cargar la imagen recibida
         contents = await image.read()
-        pil_image = Image.open(io.BytesIO(contents))
+        if not contents:
+            raise ValueError("El archivo recibido está vacío.")
 
-        # 2. Prompt indicando respuesta JSON estricta
+        pil_image = Image.open(io.BytesIO(contents))
+        if pil_image.mode != "RGB":
+            pil_image = pil_image.convert("RGB")
+
         prompt = f"""
         Identifica el objeto principal de esta imagen para un estudiante de idioma.
         Idioma objetivo: {target_language}.
 
-        Responde ÚNICAMENTE con un JSON válido con esta estructura:
+        Responde ÚNICAMENTE con un JSON válido con esta estructura exacta:
         {{
             "object_detected": "nombre del objeto en español",
             "vocabulary": "el/la palabra con su artículo en {target_language}",
-            "example_sentence": "una frase natural y cotidiana en {target_language} usando la palabra",
-            "phonetic": "transcripción fonética aproximada o pronunciación simplificada"
+            "example_sentence": "una frase natural en {target_language} usando la palabra",
+            "phonetic": "transcripción fonética aproximada"
         }}
         """
 
-        # 3. Llamada a Gemini 1.5 Flash (Gratuito con soporte de Visión)
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[pil_image, prompt],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
+        # Obtener dinámicamente un modelo activo para tu API Key
+        active_model_name = get_working_model()
+        print(f"👉 Usando el modelo activo: {active_model_name}")
+
+        model = genai.GenerativeModel('gemini-2.0-flash')
+
+        # Generar respuesta
+        response = model.generate_content(
+            [prompt, pil_image],
+            generation_config={"response_mime_type": "application/json"}
         )
 
-        # 4. Parsear respuesta
+        if not response.text:
+            raise ValueError("Gemini devolvió una respuesta vacía.")
+
         data = json.loads(response.text)
 
         return TranslationResponse(
@@ -83,6 +119,8 @@ async def analyze_image(
         )
 
     except Exception as e:
-        print(f"Error: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Error en el análisis: {str(e)}")
+        print("\n❌ --- ERROR EN ANALYZE-IMAGE --- ❌")
+        print(f"Tipo: {type(e).__name__}")
+        print(f"Mensaje: {str(e)}")
+        print("-----------------------------------\n")
+        raise HTTPException(status_code=500, detail=str(e))
