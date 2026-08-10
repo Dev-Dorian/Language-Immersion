@@ -5,8 +5,8 @@ import {
   View,
   TouchableOpacity,
   ActivityIndicator,
-  Alert
-
+  Alert,
+  ScrollView
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -66,7 +66,7 @@ export default function HomeScreen() {
       }
 
       const formData = new FormData();
-      formData.append('target_language', 'french');
+      formData.append('target_language', 'spanish');
       formData.append('image', {
         uri: photo.uri,
         name: 'photo.jpg',
@@ -101,29 +101,30 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Language Immersion Dorian 🌍</Text>
       <View style={styles.cameraContainer}>
-        <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing='back' onCameraReady={() => setIsCameraReady(true)}>
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={[
-              styles.captureButton,
-              (!isCameraReady || loading) && { opacity: 0.5 }
-            ]}
-              onPress={takePicture}
-              disabled={loading || !isCameraReady}>
-              <View style={styles.innerButton}></View>
-            </TouchableOpacity>
-          </View>
-        </CameraView>
+        <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing='back' onCameraReady={() => setIsCameraReady(true)}></CameraView>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={[
+            styles.captureButton,
+            (!isCameraReady || loading) && { opacity: 0.5 }
+          ]}
+            onPress={takePicture}
+            disabled={loading || !isCameraReady}>
+            <Text style={styles.innerButton}></Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
 
       {loading && <ActivityIndicator size="large" color="#38BDF8" style={{ marginTop: 20 }}></ActivityIndicator>}
       {result && !loading && (
-        <View style={styles.card}>
-          <Text style={styles.tag}>Detectado: {result.object_detected}</Text>
-          <Text style={styles.vocab}>{result.vocabulary}</Text>
-          <Text style={styles.phonetic}>/ {result.phonetic} /</Text>
-          <Text style={styles.sentence}>{result.example_sentence}</Text>
-        </View>
+        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={true}>
+          <View style={styles.card}>
+            <Text style={styles.tag}>Detectado: {result.object_detected}</Text>
+            <Text style={styles.vocab}>{result.vocabulary}</Text>
+            <Text style={styles.phonetic}>/ {result.phonetic} /</Text>
+            <Text style={styles.sentence}>{result.example_sentence}</Text>
+          </View>
+        </ScrollView>
       )}
 
     </SafeAreaView >
@@ -166,17 +167,18 @@ const styles = StyleSheet.create({
 
   },
   buttonContainer: {
-    flex: 1,
-    backgroundColor: 'transparent',
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingBottom: 15
   },
   captureButton: {
-    width: 65,
-    height: 65,
+    width: 70,
+    height: 70,
     borderRadius: 35,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -200,6 +202,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginTop: 15
+  },
+  scrollContent: {
+    flex: 1
   },
   tag: {
     color: '#38BDF8',

@@ -1,16 +1,16 @@
 import os
 import json
+import base64
 import io
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import google.generativeai as genai
-from PIL import Image
+import ollama
 from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="LanguageImmersion API - Gemini Free")
+app = FastAPI(title="LanguageImmersion API - Local Ollama")
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,15 +19,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    print("⚠️ ADVERTENCIA: GEMINI_API_KEY no encontrada.")
-else:
-    print("✅ GEMINI_API_KEY cargada correctamente.")
-
-# Configurar cliente de Gemini
-genai.configure(api_key=api_key)
 
 
 class TranslationResponse(BaseModel):
@@ -40,87 +31,81 @@ class TranslationResponse(BaseModel):
 
 @app.get("/")
 def home():
-    return {"status": "ok", "app": "LanguageImmersion"}
+    return {"status": "ok", "app": "LanguageImmersion Backend con Ollama Local"}
 
 
-@app.get("/list-models")
-def list_models():
-    try:
-        models = [
-            m.name for m in genai.list_models()
-            if 'generateContent' in m.supported_generation_methods
-        ]
-        return {"available_models": models}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-def get_working_model():
-    """Busca y retorna el primer modelo activo disponible para tu API Key."""
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            # Quitamos el prefijo 'models/' si la librería lo requiere
-            model_name = m.name.replace("models/", "")
-            return model_name
-    raise RuntimeError(
-        "No se encontraron modelos con 'generateContent' para esta API Key.")
+def ensure_string(val) -> str:
+    """Convierte dicts, lists u otros tipos a una cadena limpia."""
+    if isinstance(val, dict):
+        # Si devuelve un dict, toma el primer valor no vacío o une los valores
+        return " / ".join(str(v) for v in val.values() if v)
+    if isinstance(val, list):
+        return ", ".join(str(v) for v in val if v)
+    return str(val) if val is not None else ""
 
 
 @app.post("/analyze-image", response_model=TranslationResponse)
 async def analyze_image(
-    target_language: str = Form("french"),
+    target_language: str = Form("spanish"),
     image: UploadFile = File(...)
 ):
     try:
+        # 1. Leer los bytes de la imagen recibida desde la app
         contents = await image.read()
         if not contents:
-            raise ValueError("El archivo recibido está vacío.")
+            raise ValueError("El archivo de imagen está vacío.")
 
-        pil_image = Image.open(io.BytesIO(contents))
-        if pil_image.mode != "RGB":
-            pil_image = pil_image.convert("RGB")
+        # 2. Convertir la imagen a bytes/base64 requeridos por Ollama
+        base64_image = base64.b64encode(contents).decode("utf-8")
 
+        # 3. Prompt estructurado para forzar respuesta JSON
         prompt = f"""
         Identifica el objeto principal de esta imagen para un estudiante de idioma.
         Idioma objetivo: {target_language}.
 
-        Responde ÚNICAMENTE con un JSON válido con esta estructura exacta:
+        Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin texto explicativo adicional:
         {{
-            "object_detected": "nombre del objeto en español",
+            "object_detected": "nombre del objeto en {target_language}",
             "vocabulary": "el/la palabra con su artículo en {target_language}",
             "example_sentence": "una frase natural en {target_language} usando la palabra",
             "phonetic": "transcripción fonética aproximada"
         }}
         """
 
-        # Obtener dinámicamente un modelo activo para tu API Key
-        active_model_name = get_working_model()
-        print(f"👉 Usando el modelo activo: {active_model_name}")
-
-        model = genai.GenerativeModel('gemini-2.0-flash')
-
-        # Generar respuesta
-        response = model.generate_content(
-            [prompt, pil_image],
-            generation_config={"response_mime_type": "application/json"}
+        # 4. Enviar la imagen a Ollama local (usando llava o llama3.2-vision)
+        response = ollama.chat(
+            model='gemma4:12b',  # O 'llama3.2-vision'
+            messages=[
+                {
+                    'role': 'user',
+                    'content': prompt,
+                    'images': [base64_image]
+                }
+            ],
+            format='json'  # Forzar respuesta en formato JSON
         )
 
-        if not response.text:
-            raise ValueError("Gemini devolvió una respuesta vacía.")
+        response_content = response['message']['content']
+        if not response_content:
+            raise ValueError("Ollama devolvió una respuesta vacía.")
 
-        data = json.loads(response.text)
+        data = json.loads(response_content)
 
         return TranslationResponse(
-            object_detected=data.get("object_detected", "Desconocido"),
+            object_detected=ensure_string(
+                data.get("object_detected", "Desconocido")),
             target_language=target_language,
-            vocabulary=data.get("vocabulary", ""),
-            example_sentence=data.get("example_sentence", ""),
-            phonetic=data.get("phonetic", "")
+            vocabulary=ensure_string(data.get("vocabulary", "")),
+            example_sentence=ensure_string(data.get("example_sentence", "")),
+            phonetic=ensure_string(data.get("phonetic", ""))
         )
 
     except Exception as e:
-        print("\n❌ --- ERROR EN ANALYZE-IMAGE --- ❌")
+        print("\n❌ --- ERROR EN ANALYZE-IMAGE (OLLAMA) --- ❌")
         print(f"Tipo: {type(e).__name__}")
         print(f"Mensaje: {str(e)}")
-        print("-----------------------------------\n")
-        raise HTTPException(status_code=500, detail=str(e))
+        print("-------------------------------------------\n")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al procesar con Ollama local: {str(e)}"
+        )
