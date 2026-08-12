@@ -1,7 +1,7 @@
 import os
 import json
 import base64
-import io
+from typing import List, Any
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -25,8 +25,7 @@ class TranslationResponse(BaseModel):
     object_detected: str
     target_language: str
     vocabulary: str
-    example_sentence: str
-    phonetic: str
+    examples: List[str]
 
 
 @app.get("/")
@@ -34,14 +33,27 @@ def home():
     return {"status": "ok", "app": "LanguageImmersion Backend con Ollama Local"}
 
 
-def ensure_string(val) -> str:
-    """Convierte dicts, lists u otros tipos a una cadena limpia."""
+def ensure_string(val: Any) -> str:
+    """Convierte objetos o tipos no esperados a una cadena limpia."""
     if isinstance(val, dict):
         # Si devuelve un dict, toma el primer valor no vacío o une los valores
         return " / ".join(str(v) for v in val.values() if v)
     if isinstance(val, list):
         return ", ".join(str(v) for v in val if v)
     return str(val) if val is not None else ""
+
+
+def ensure_string_list(val: Any) -> List[str]:
+    """ Escanea y garantiza que el resultado sea siempre una lista de cadenas. """
+    if isinstance(val, list):
+        return [ensure_string(item) for item in val if item]
+    if isinstance(val, str):
+        # Si devolvió un solo texto largo con saltos de línea
+        lines = [line.strip() for line in val.split("\n") if line.strip()]
+        return lines if lines else [val]
+    if isinstance(val, dict):
+        return [ensure_string(v) for v in val.values() if v]
+    return []
 
 
 @app.post("/analyze-image", response_model=TranslationResponse)
@@ -63,12 +75,25 @@ async def analyze_image(
         Identifica el objeto principal de esta imagen para un estudiante de idioma.
         Idioma objetivo: {target_language}.
 
+        Genera exactamente 10 oraciones de ejemplo sencillas y de uso cotidiano en {target_language} utilizando el vocabulario identificado.
+
         Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin texto explicativo adicional:
+        Instrucción estricta: Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta:
         {{
             "object_detected": "nombre del objeto en {target_language}",
             "vocabulary": "el/la palabra con su artículo en {target_language}",
-            "example_sentence": "una frase natural en {target_language} usando la palabra",
-            "phonetic": "transcripción fonética aproximada"
+            "examples":[
+                "1. Primera oración en {target_language}",
+                "2. Segunda oración en {target_language}",
+                "3. Tercera oración en {target_language}",
+                "4. Cuarta oración en {target_language}",
+                "5. Quinta oración en {target_language}",
+                "6. Sexta oración en {target_language}",
+                "7. Séptima oración en {target_language}",
+                "8. Octava oración en {target_language}",
+                "9. Novena oración en {target_language}",
+                "10. Décima oración en {target_language}"
+            ]
         }}
         """
 
@@ -96,8 +121,7 @@ async def analyze_image(
                 data.get("object_detected", "Desconocido")),
             target_language=target_language,
             vocabulary=ensure_string(data.get("vocabulary", "")),
-            example_sentence=ensure_string(data.get("example_sentence", "")),
-            phonetic=ensure_string(data.get("phonetic", ""))
+            examples=ensure_string_list(data.get("examples", []))
         )
 
     except Exception as e:

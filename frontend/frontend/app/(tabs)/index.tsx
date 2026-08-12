@@ -5,29 +5,26 @@ import {
   View,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
+  Dimensions,
   Alert,
-  ScrollView
+  StatusBar,
 } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera'
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Picker } from '@react-native-picker/picker';
 
-const API_URL = 'http://192.168.1.160:8000'
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-interface ImmersionCard {
-  object_detected: string;
-  target_language: string;
-  vocabulary: string;
-  example_sentence: string;
-  phonetic: string;
-}
+const API_URL = 'http://192.168.1.160:8000/analyze-image';
+
 
 export default function HomeScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
-  const [loading, setLoading] = useState(false);
-  const [isCameraReady, setIsCameraReady] = useState(false);
-  const [result, setResult] = useState<ImmersionCard | null>(null);
-  const cameraRef = useRef<CameraView>(null);
+  const [targetLanguage, setTargetLanguage] = useState('spanish');
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState(null)
+  const cameraRef = useRef(null)
 
   if (!permission) {
     return <View style={styles.container}></View>
@@ -35,45 +32,34 @@ export default function HomeScreen() {
 
   if (!permission.granted) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
-        <Text style={styles.text}>Necesitamos permiso para usar la camara</Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
-          <Text style={styles.buttonText}>Conceder Permisos</Text>
+      <View style={styles.permissionContainer}>
+        <Text style={styles.permissionText}>Necesitamos acceso a la camara para identificar objetos.</Text>
+        <TouchableOpacity>
+          <Text>Conceder Permiso</Text>
         </TouchableOpacity>
-      </SafeAreaView>
+      </View>
     )
   }
 
-  const takePicture = async () => {
-    if (!cameraRef.current || loading || !isCameraReady) {
-      if (!isCameraReady) {
-        Alert.alert('Camara', 'Espera un segundo a que la camara termine de cargar.')
-      }
-      return
-    }
+  const takePictureAndAnalyze = async () => {
+    if (!cameraRef.current || loading) return;
+
     try {
       setLoading(true)
-      setResult(null)
-
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.5,
-        shutterSound: false,
-        skipProcessing: true,
+        quality: 0.7,
+        base64: false,
       });
 
-      if (!photo?.uri) {
-        throw new Error('No se pudo obtener el URI de la imagen.');
-      }
-
       const formData = new FormData();
-      formData.append('target_language', 'spanish');
+      formData.append('target_language', targetLanguage);
       formData.append('image', {
         uri: photo.uri,
         name: 'photo.jpg',
-        type: 'image/jpeg'
-      } as any)
+        type: 'image/jpeg',
+      });
 
-      const response = await fetch(`${API_URL}/analyze-image`, {
+      const response = await fetch(API_URL, {
         method: 'POST',
         body: formData,
         headers: {
@@ -85,145 +71,133 @@ export default function HomeScreen() {
         throw new Error(`Error en el servidor: ${response.status}`);
       }
 
-      const data: ImmersionCard = await response.json()
-      setResult(data)
+      const data = await response.json();
+      setResult(data);
 
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al conectar con el servidor.');
-      console.error(error)
+    } catch (error) {
+      console.error('Error al analizar la imagen:', error);
+      Alert.alert(
+        'Error de conexión',
+        'No se pudo procesar la imagen. Verifica la conexión con el servidor FastAPI.'
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
-
+  };
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Language Immersion Dorian 🌍</Text>
-      <View style={styles.cameraContainer}>
-        <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing='back' onCameraReady={() => setIsCameraReady(true)}></CameraView>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={[
-            styles.captureButton,
-            (!isCameraReady || loading) && { opacity: 0.5 }
-          ]}
-            onPress={takePicture}
-            disabled={loading || !isCameraReady}>
-            <Text style={styles.innerButton}></Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-
-      {loading && <ActivityIndicator size="large" color="#38BDF8" style={{ marginTop: 20 }}></ActivityIndicator>}
-      {result && !loading && (
-        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={true}>
-          <View style={styles.card}>
-            <Text style={styles.tag}>Detectado: {result.object_detected}</Text>
-            <Text style={styles.vocab}>{result.vocabulary}</Text>
-            <Text style={styles.phonetic}>/ {result.phonetic} /</Text>
-            <Text style={styles.sentence}>{result.example_sentence}</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content"></StatusBar>
+      <CameraView style={StyleSheet.absoluteFillObject} facing='back' ></CameraView>
+      {!result && (
+        <View style={styles.overlayContainer}>
+          <View style={styles.pickerWrapper}>
+            <Text style={styles.pickerLabel}>Idioma objetivo Dorian</Text>
+            <View style={styles.pickerContainer}>
+              <Picker style={styles.picker}>
+                <Picker.Item label="🇫🇷 Francés" value="french" />
+                <Picker.Item label="🇬🇧 Inglés" value="english" />
+                <Picker.Item label="🇩🇪 Alemán" value="german" />
+                <Picker.Item label="🇮🇹 Italiano" value="italian" />
+                <Picker.Item label="🇵🇹 Portugués" value="portuguese" />
+              </Picker>
+            </View>
           </View>
-        </ScrollView>
+
+          <View style={styles.controlsContainer}>
+            <TouchableOpacity style={[styles.captureButton, loading && styles.captureButtonDisabled]}>
+              {loading ? (
+                <ActivityIndicator></ActivityIndicator>
+              ) : (
+                <View></View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
-    </SafeAreaView >
-  );
+      {result && (
+        <View>
+          <View>
+            <View>
+              <Text>Segundo texto</Text>
+            </View>
+          </View>
+        </View>
+      )
+
+      }
+    </View>
+  )
+
+
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
-    padding: 16
+    backgroundColor: '#000',
   },
-  centerContainer: {
+
+  permissionContainer: {
     flex: 1,
-    backgroundColor: '#0f172A',
+    backgroundColor: '#1E1E2E',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20
+    padding: 20,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFF',
-    textAlign: 'center',
-    marginVertical: 10
-  },
-  text: {
-    color: '#FFF',
+
+  permissionText: {
+    color: '#CDD6F4',
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 20
+    marginBottom: 20,
   },
-  cameraContainer: {
-    width: '100%',
-    height: 380,
+
+  // Capa UI sobre la Cámara
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'space-between',
+    paddingTop: 50,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+  },
+
+  pickerWrapper: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(30, 30, 46, 0.85)',
     borderRadius: 16,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#000',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    alignItems: 'center',
+    width: '85%',
+  },
+
+  pickerLabel: {
+    color: '#89B4FA',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+
+  pickerContainer: {
+    width: '100%',
+  },
+  picker: {
+    color: '#FFF',
+    width: '100%',
+  },
+
+  controlsContainer: {
+    alignItems: 'center',
+    backgroundColor: 'green'
+  },
+
+  captureButton: {
 
   },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  captureButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  innerButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FFF'
-  },
-  button: {
-    backgroundColor: '#3B82F6',
-    padding: 12,
-    borderRadius: 8
-  },
-  buttonText: {
-    color: '#FFF',
-    fontWeight: 'bold'
-  },
-  card: {
-    backgroundColor: '#1E293B',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 15
-  },
-  scrollContent: {
-    flex: 1
-  },
-  tag: {
-    color: '#38BDF8',
-    fontSize: 12,
-    fontWeight: 'bold'
-  },
-  vocab: {
-    color: '#FFF',
-    fontSize: 22,
-    fontWeight: 'bold'
-  },
-  phonetic: {
-    color: '#94A3B8',
-    fontStyle: 'italic',
-    marginBottom: 8
-  },
-  sentence: {
-    color: '#F1F5F9',
-    fontSize: 15
+
+  captureButtonDisabled: {
+
   }
 
 
