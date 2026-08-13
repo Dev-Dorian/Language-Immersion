@@ -22,9 +22,9 @@ export default function HomeScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
   const [targetLanguage, setTargetLanguage] = useState('spanish');
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState(null)
-  const cameraRef = useRef(null)
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const cameraRef = useRef(null);
 
   if (!permission) {
     return <View style={styles.container}></View>
@@ -119,8 +119,37 @@ export default function HomeScreen() {
         <View>
           <View>
             <View>
-              <Text>Segundo texto</Text>
+              <Text>{result.target_language.toUpperCase()}</Text>
+              <Text>{result.object_detected}</Text>
             </View>
+
+            <View>
+              <Text>Este es el tercer texto{result.vocabulary}</Text>
+              {result.phonetic ? (
+                <Text>[{result.phonetic}]</Text>
+              ) : null}
+            </View>
+
+            <ScrollView>
+              <Text>10 Oraciones de Ejemplo ({result.examples?.length || 0}):</Text>
+
+              {result.examples && result.examples.length > 0 ? (
+                result.examples.map((sentence, index) => (
+                  <View key={index}>
+                    <View>
+                      <Text>{index + 1}</Text>
+                    </View>
+                    <Text>{sentence}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text>No se encontraron oraciones disponibles</Text>
+              )}
+              <View style={{ height: 20 }}></View>
+            </ScrollView>
+            <TouchableOpacity>
+              <Text>Capturar Otra Foto</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )
