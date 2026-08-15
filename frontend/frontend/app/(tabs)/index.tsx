@@ -87,13 +87,13 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content"></StatusBar>
-      <CameraView style={StyleSheet.absoluteFillObject} facing='back' ></CameraView>
+      <CameraView style={StyleSheet.absoluteFillObject} facing='back' ref={cameraRef}></CameraView>
       {!result && (
         <View style={styles.overlayContainer}>
           <View style={styles.pickerWrapper}>
             <Text style={styles.pickerLabel}>Idioma objetivo Dorian</Text>
             <View style={styles.pickerContainer}>
-              <Picker style={styles.picker}>
+              <Picker style={styles.picker} selectedValue={targetLanguage} onValueChange={(itemValue) => setTargetLanguage(itemValue)} dropdownIconColor="#FFF">
                 <Picker.Item label="🇫🇷 Francés" value="french" />
                 <Picker.Item label="🇬🇧 Inglés" value="english" />
                 <Picker.Item label="🇩🇪 Alemán" value="german" />
@@ -104,11 +104,11 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.controlsContainer}>
-            <TouchableOpacity style={[styles.captureButton, loading && styles.captureButtonDisabled]}>
+            <TouchableOpacity style={[styles.captureButton, loading && styles.captureButtonDisabled]} onPress={takePictureAndAnalyze} disabled={loading}>
               {loading ? (
-                <ActivityIndicator></ActivityIndicator>
+                <ActivityIndicator size="large" color="#1E1E2E"></ActivityIndicator>
               ) : (
-                <View></View>
+                <View style={styles.captureInnerCircle}></View>
               )}
             </TouchableOpacity>
           </View>
@@ -116,7 +116,7 @@ export default function HomeScreen() {
       )}
 
       {result && (
-        <View>
+        <View style={styles.cardContainer}>
           <View>
             <View>
               <Text>{result.target_language.toUpperCase()}</Text>
@@ -147,7 +147,7 @@ export default function HomeScreen() {
               )}
               <View style={{ height: 20 }}></View>
             </ScrollView>
-            <TouchableOpacity>
+            <TouchableOpacity style={styles.closeButton}>
               <Text>Capturar Otra Foto</Text>
             </TouchableOpacity>
           </View>
@@ -180,6 +180,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 20,
+  },
+
+  permissionButton: {
+    backgroundColor: '#89B4FA',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+  },
+
+  permissionButtonText: {
+    color: '#11111B',
+    fontWeight: 'bold',
   },
 
   // Capa UI sobre la Cámara
@@ -222,11 +234,40 @@ const styles = StyleSheet.create({
   },
 
   captureButton: {
-
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 4,
+    borderColor: '#FFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   captureButtonDisabled: {
+    opacity: 0.6,
+  },
 
+  captureInnerCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFF',
+  },
+
+  cardContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+
+  closeButton: {
+    backgroundColor: '#89B4FA',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 10,
   }
 
 
