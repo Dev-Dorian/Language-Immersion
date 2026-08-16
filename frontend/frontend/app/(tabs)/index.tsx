@@ -18,13 +18,33 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const API_URL = 'http://192.168.1.160:8000/analyze-image';
 
 
+
 export default function HomeScreen() {
+  const MOCK_RESULT = {
+    object_detected: "Gafas de sol (Prueba UI)",
+    target_language: "french",
+    vocabulary: "les lunettes de soleil",
+    phonetic: "lay loo-net duh soh-lay",
+    examples: [
+      "1. J'ai besoin de mes lunettes para leer este libro.",
+      "2. Où ai-je mis mes lunettes de soleil ?",
+      "3. Les lunettes sont sur la table du salon.",
+      "4. Il porte des lunettes depuis l'âge de dix ans.",
+      "5. Mes lunettes sont très propres aujourd'hui.",
+      "6. As-tu vu mes nouvelles lunettes ?",
+      "7. Elle a acheté des lunettes très élégantes.",
+      "8. N'oublie pas tes lunettes avant de sortir.",
+      "9. Ces lunettes me protègent bien de la lumière.",
+      "10. Je dois changer les verres de mes lunettes."
+    ]
+  };
 
   const [permission, requestPermission] = useCameraPermissions();
   const [targetLanguage, setTargetLanguage] = useState('spanish');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(MOCK_RESULT);
   const cameraRef = useRef(null);
+
 
   if (!permission) {
     return <View style={styles.container}></View>
@@ -117,40 +137,41 @@ export default function HomeScreen() {
 
       {result && (
         <View style={styles.cardContainer}>
-          <View>
-            <View>
-              <Text>{result.target_language.toUpperCase()}</Text>
-              <Text>{result.object_detected}</Text>
-            </View>
 
-            <View>
-              <Text>Este es el tercer texto{result.vocabulary}</Text>
-              {result.phonetic ? (
-                <Text>[{result.phonetic}]</Text>
-              ) : null}
-            </View>
-
-            <ScrollView>
-              <Text>10 Oraciones de Ejemplo ({result.examples?.length || 0}):</Text>
-
-              {result.examples && result.examples.length > 0 ? (
-                result.examples.map((sentence, index) => (
-                  <View key={index}>
-                    <View>
-                      <Text>{index + 1}</Text>
-                    </View>
-                    <Text>{sentence}</Text>
-                  </View>
-                ))
-              ) : (
-                <Text>No se encontraron oraciones disponibles</Text>
-              )}
-              <View style={{ height: 20 }}></View>
-            </ScrollView>
-            <TouchableOpacity style={styles.closeButton}>
-              <Text>Capturar Otra Foto</Text>
-            </TouchableOpacity>
+          <View style={styles.dragHandle}></View>
+          <View style={styles.header}>
+            <Text style={styles.badgeText}>{result.target_language.toUpperCase()}</Text>
+            <Text style={styles.objectTitle}>{result.object_detected}</Text>
           </View>
+
+          <View>
+            <Text>Este es el tercer texto{result.vocabulary}</Text>
+            {result.phonetic ? (
+              <Text>[{result.phonetic}]</Text>
+            ) : null}
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={true}>
+            <Text>10 Oraciones de Ejemplo ({result.examples?.length || 0}):</Text>
+
+            {result.examples && result.examples.length > 0 ? (
+              result.examples.map((sentence, index) => (
+                <View key={index}>
+                  <View>
+                    <Text>{index + 1}</Text>
+                  </View>
+                  <Text>{sentence}</Text>
+                </View>
+              ))
+            ) : (
+              <Text>No se encontraron oraciones disponibles</Text>
+            )}
+            <View style={{ height: 20 }}></View>
+          </ScrollView>
+          <TouchableOpacity style={styles.closeButton}>
+            <Text>Capturar Otra Foto</Text>
+          </TouchableOpacity>
+
         </View>
       )
 
@@ -260,6 +281,43 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    height: SCREEN_HEIGHT * 0.8,
+    backgroundColor: '#1E1E2E',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#45475A',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+
+  header: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  badgeText: {
+    color: '#89B4FA',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+
+  objectTitle: {
+    fontSize: 20,
   },
 
   closeButton: {
