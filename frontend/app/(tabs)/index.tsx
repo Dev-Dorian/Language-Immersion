@@ -17,8 +17,6 @@ import { styles } from './styles'
 
 const API_URL = 'http://192.168.1.160:8000/analyze-image';
 
-
-
 export default function HomeScreen() {
   const MOCK_RESULT = {
     object_detected: "Gafas de sol (Prueba UI)",

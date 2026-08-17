@@ -74,7 +74,6 @@ export const styles = StyleSheet.create({
 
   controlsContainer: {
     alignItems: 'center',
-    backgroundColor: 'green'
   },
 
   captureButton: {
