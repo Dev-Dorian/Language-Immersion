@@ -51,13 +51,13 @@ An intelligent, real-world language learning mobile application powered by compu
 
 Domain Technology Description Frontend React Native / ExpoCross-platform mobile UI (CameraView, StyleSheet) Backend Python 3.10+ / FastAPI High-performance asynchronous API & schema validation AI Inference Ollama Engine Local execution of multimodal vision models (llama3.2-vision)Data Protocol REST / JSON Structured JSON payload parsing via Pydantic schemas
 
-📋 System Requirements 
+## 📋 System Requirements 
 PrerequisitesNode.js: v18.x or later 
 npm or yarnPython: v3.10 or later
 Ollama: Installed and running locally
 Hardware: Dedicated GPU recommended for fast local vision inference (Apple Silicon M-series, NVIDIA RTX series, etc.)
 
-🚀 Installation & Setup
+## 🚀 Installation & Setup
 
 1. Repository Setup Bash
 ``` text
@@ -106,7 +106,7 @@ Bash
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-💡 The backend API docs will be live at http://localhost:8000/docs3. 
+## 💡 The backend API docs will be live at http://localhost:8000/docs3. 
 
 3. Frontend Setup (React Native + Expo)
 
@@ -164,24 +164,21 @@ JSON{
 }
 
 
-📂 Repository Structure
+## 📂 Repository Structure
 ```
 Plaintextlanguage-immersion-app/
 ├── backend/
 │   ├── main.py              # FastAPI server entry point & routing
-│   ├── services/            # Ollama integration and prompt templates
-│   ├── schemas/             # Pydantic data validation models
 │   └── requirements.txt     # Python dependencies
 ├── frontend/
-│   ├── App.js               # Main React Native application layout
-│   ├── App.styles.js        # Modularized UI styles (StyleSheet)
-│   ├── components/          # Reusable UI components
+│   ├── index.tsx               # Main React Native application layout
+│   ├── styles.tsx        # Modularized UI styles (StyleSheet)
 │   └── package.json         # React Native dependencies & scripts
 ├── .gitignore               # Ignored build outputs and environments
 └── README.md                # Project documentation
 ```
 
-🛠️ Development & UI Styling Mode
+## 🛠️ Development & UI Styling Mode
 
 To speed up styling iterations on the results card without sending requests to the LLM backend every time, use the built-in Mock Data Mode:
 ```
@@ -193,5 +190,5 @@ const [result, setResult] = useState(MOCK_RESULT);
 
 Or tap the 🧪 Test UI button directly inside the app controls overlay.
 
-📄 License 
+## 📄 License 
 Distributed under the MIT License. See LICENSE for more information.
