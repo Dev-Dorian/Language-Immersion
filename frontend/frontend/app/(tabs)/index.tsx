@@ -53,9 +53,9 @@ export default function HomeScreen() {
   if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>Necesitamos acceso a la camara para identificar objetos.</Text>
+        <Text style={styles.permissionText}>We need access to the camera to identify objects.</Text>
         <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Conceder Permiso</Text>
+          <Text style={styles.permissionButtonText}>Grant Permission</Text>
         </TouchableOpacity>
       </View>
     )
@@ -88,17 +88,17 @@ export default function HomeScreen() {
       });
 
       if (!response.ok) {
-        throw new Error(`Error en el servidor: ${response.status}`);
+        throw new Error(`Server error: ${response.status}`);
       }
 
       const data = await response.json();
       setResult(data);
 
     } catch (error) {
-      console.error('Error al analizar la imagen:', error);
+      console.error('Error parsing the image:', error);
       Alert.alert(
-        'Error de conexión',
-        'No se pudo procesar la imagen. Verifica la conexión con el servidor FastAPI.'
+        'Connection error',
+        'The image could not be processed. Check the connection to the FastAPI server.'
       );
     } finally {
       setLoading(false);
@@ -150,7 +150,7 @@ export default function HomeScreen() {
           </View>
 
           <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
-            <Text style={styles.sectionTitle}>3 Oraciones de Ejemplo ({result.examples?.length || 0}):</Text>
+            <Text style={styles.sectionTitle}>3 Example Sentences ({result.examples?.length || 0}):</Text>
 
             {result.examples && result.examples.length > 0 ? (
               result.examples.map((sentence, index) => (
@@ -162,12 +162,12 @@ export default function HomeScreen() {
                 </View>
               ))
             ) : (
-              <Text style={styles.noExamplesText}>No se encontraron oraciones disponibles.</Text>
+              <Text style={styles.noExamplesText}>No available sentences were found.</Text>
             )}
             <View style={{ height: 20 }}></View>
           </ScrollView>
           <TouchableOpacity style={styles.closeButton} onPress={() => setResult(null)}>
-            <Text style={styles.closeButtonText}>Capturar Otra Foto</Text>
+            <Text style={styles.closeButtonText}>Take Another Photo</Text>
           </TouchableOpacity>
 
         </View>
