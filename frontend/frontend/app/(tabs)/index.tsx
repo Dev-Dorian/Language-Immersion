@@ -6,14 +6,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
-  Dimensions,
   Alert,
   StatusBar,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Picker } from '@react-native-picker/picker';
+import { styles } from './styles'
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 
 const API_URL = 'http://192.168.1.160:8000/analyze-image';
 
@@ -42,7 +42,7 @@ export default function HomeScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [targetLanguage, setTargetLanguage] = useState('spanish');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(MOCK_RESULT);
+  const [result, setResult] = useState(null);
   const cameraRef = useRef(null);
 
 
@@ -54,8 +54,8 @@ export default function HomeScreen() {
     return (
       <View style={styles.permissionContainer}>
         <Text style={styles.permissionText}>Necesitamos acceso a la camara para identificar objetos.</Text>
-        <TouchableOpacity>
-          <Text>Conceder Permiso</Text>
+        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+          <Text style={styles.permissionButtonText}>Conceder Permiso</Text>
         </TouchableOpacity>
       </View>
     )
@@ -111,9 +111,10 @@ export default function HomeScreen() {
       {!result && (
         <View style={styles.overlayContainer}>
           <View style={styles.pickerWrapper}>
-            <Text style={styles.pickerLabel}>Idioma objetivo Dorian</Text>
+            <Text style={styles.pickerLabel}>Language</Text>
             <View style={styles.pickerContainer}>
               <Picker style={styles.picker} selectedValue={targetLanguage} onValueChange={(itemValue) => setTargetLanguage(itemValue)} dropdownIconColor="#FFF">
+                <Picker.Item label="🇪🇸 Spanish" value="spanish" />
                 <Picker.Item label="🇫🇷 Francés" value="french" />
                 <Picker.Item label="🇬🇧 Inglés" value="english" />
                 <Picker.Item label="🇩🇪 Alemán" value="german" />
@@ -144,32 +145,29 @@ export default function HomeScreen() {
             <Text style={styles.objectTitle}>{result.object_detected}</Text>
           </View>
 
-          <View>
-            <Text>Este es el tercer texto{result.vocabulary}</Text>
-            {result.phonetic ? (
-              <Text>[{result.phonetic}]</Text>
-            ) : null}
+          <View style={styles.vocabularyCard}>
+            <Text style={styles.vocabularyText}>{result.vocabulary}</Text>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={true}>
-            <Text>10 Oraciones de Ejemplo ({result.examples?.length || 0}):</Text>
+          <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
+            <Text style={styles.sectionTitle}>3 Oraciones de Ejemplo ({result.examples?.length || 0}):</Text>
 
             {result.examples && result.examples.length > 0 ? (
               result.examples.map((sentence, index) => (
-                <View key={index}>
-                  <View>
-                    <Text>{index + 1}</Text>
+                <View key={index} style={styles.sentenceCard}>
+                  <View style={styles.sentenceBadge}>
+                    <Text style={styles.sentenceBadgeNumber}>{index + 1}</Text>
                   </View>
-                  <Text>{sentence}</Text>
+                  <Text style={styles.sentenceText}>{sentence}</Text>
                 </View>
               ))
             ) : (
-              <Text>No se encontraron oraciones disponibles</Text>
+              <Text style={styles.noExamplesText}>No se encontraron oraciones disponibles.</Text>
             )}
             <View style={{ height: 20 }}></View>
           </ScrollView>
-          <TouchableOpacity style={styles.closeButton}>
-            <Text>Capturar Otra Foto</Text>
+          <TouchableOpacity style={styles.closeButton} onPress={() => setResult(null)}>
+            <Text style={styles.closeButtonText}>Capturar Otra Foto</Text>
           </TouchableOpacity>
 
         </View>
@@ -182,153 +180,3 @@ export default function HomeScreen() {
 
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-
-  permissionContainer: {
-    flex: 1,
-    backgroundColor: '#1E1E2E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-
-  permissionText: {
-    color: '#CDD6F4',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-
-  permissionButton: {
-    backgroundColor: '#89B4FA',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-  },
-
-  permissionButtonText: {
-    color: '#11111B',
-    fontWeight: 'bold',
-  },
-
-  // Capa UI sobre la Cámara
-  overlayContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-  },
-
-  pickerWrapper: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(30, 30, 46, 0.85)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignItems: 'center',
-    width: '85%',
-  },
-
-  pickerLabel: {
-    color: '#89B4FA',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-
-  pickerContainer: {
-    width: '100%',
-  },
-  picker: {
-    color: '#FFF',
-    width: '100%',
-  },
-
-  controlsContainer: {
-    alignItems: 'center',
-    backgroundColor: 'green'
-  },
-
-  captureButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 4,
-    borderColor: '#FFF',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  captureButtonDisabled: {
-    opacity: 0.6,
-  },
-
-  captureInnerCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFF',
-  },
-
-  cardContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: SCREEN_HEIGHT * 0.8,
-    backgroundColor: '#1E1E2E',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-
-  dragHandle: {
-    width: 40,
-    height: 5,
-    backgroundColor: '#45475A',
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-
-  header: {
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-
-  badgeText: {
-    color: '#89B4FA',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-  },
-
-  objectTitle: {
-    fontSize: 20,
-  },
-
-  closeButton: {
-    backgroundColor: '#89B4FA',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 10,
-  }
-
-
-
-
-})

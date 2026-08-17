@@ -75,7 +75,7 @@ async def analyze_image(
         Identifica el objeto principal de esta imagen para un estudiante de idioma.
         Idioma objetivo: {target_language}.
 
-        Genera exactamente 10 oraciones de ejemplo sencillas y de uso cotidiano en {target_language} utilizando el vocabulario identificado.
+        Genera exactamente 3 oraciones de ejemplo sencillas y de uso cotidiano en {target_language} utilizando el vocabulario identificado.
 
         Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin texto explicativo adicional:
         Instrucción estricta: Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta:
@@ -85,14 +85,7 @@ async def analyze_image(
             "examples":[
                 "1. Primera oración en {target_language}",
                 "2. Segunda oración en {target_language}",
-                "3. Tercera oración en {target_language}",
-                "4. Cuarta oración en {target_language}",
-                "5. Quinta oración en {target_language}",
-                "6. Sexta oración en {target_language}",
-                "7. Séptima oración en {target_language}",
-                "8. Octava oración en {target_language}",
-                "9. Novena oración en {target_language}",
-                "10. Décima oración en {target_language}"
+                "3. Tercera oración en {target_language}"
             ]
         }}
         """
