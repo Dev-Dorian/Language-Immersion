@@ -130,7 +130,7 @@ Bash
 
    - Emulator: Press a for Android Emulator or i for iOS Simulator in the Expo CLI terminal.
 
-🔌 API Endpoint Documentation
+## 🔌 API Endpoint Documentation
 
 POST /analyze-image
 Processes a base64-encoded image and generates targeted vocabulary metrics.
